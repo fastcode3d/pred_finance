@@ -76,7 +76,7 @@ class myQueue:
         batch_time = []
         batch_IS = []
         if len(self.TDErr_list) == self.capacity:
-            for k in range(self.batch_size):
+            for k in xrange(self.batch_size):
                 begin = self.batch_segs[k][0]
                 end = self.batch_segs[k][1] + 1
                 sample_idx = random.randrange(begin, end)

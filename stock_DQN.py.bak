@@ -4,7 +4,7 @@
 ## Target Freezing,                     ##
 ## multi-layer LSTM, CNN with inception ##
 ##--------------------------------------##
-
+from __future__ import print_function
 
 import tensorflow as tf
 from tensorflow.python.ops import rnn, rnn_cell
@@ -41,7 +41,7 @@ SAVED_PATH = "saved_networks_ver3"              # folder for storing models
 
 def getYear(mode):
     while True:
-        years = input(">>> Year range of "+mode+" set(START END): ")
+        years = raw_input(">>> Year range of "+mode+" set(START END): ")
         years = years.split()
         try:
             years = [int(y) for y in years]
@@ -281,7 +281,7 @@ class DQN_module:
             h_fc2 = self.FC_layer(h_fc1[0], h_fc1[1], [1024, ACTIONS], name='h_fc2', activate=False)
 
             key = tf.GraphKeys.TRAINABLE_VARIABLES
-            update_pair = list(zip(tf.get_collection(key, scope="LSTMStack"), tf.get_collection(key, scope="tg_LSTMStack")))
+            update_pair = zip(tf.get_collection(key, scope="LSTMStack"), tf.get_collection(key, scope="tg_LSTMStack"))
             for var, tg_var in update_pair:
                 self.update_list.append(tg_var.assign(var))
 
@@ -397,7 +397,7 @@ class DQN_module:
         date_t, x_t, r_0, terminal_0, rev_0 = self.test_Market.Invest_step(do_nothing)
         s_t = x_t.reshape(INPUT_DIM, 1)
         print('Testing '+self.test_comp_name+' Start at Date: ' + date_t + '   epi_len: ' + str(self.test_Market.GetEpiLen()))
-        for i in range(DAYS_RANGE-1):
+        for i in xrange(DAYS_RANGE-1):
             date_t, x_t, r_0, terminal_0, rev_0 = self.test_Market.Invest_step(do_nothing)
             s_t = np.append(s_t, x_t.reshape(INPUT_DIM, 1), axis=1)
         assert s_t.shape[1] == DAYS_RANGE
@@ -464,7 +464,7 @@ class DQN_module:
             sys.exit(0)
         
         while True:
-            idx = input(">>>market idx: ")
+            idx = raw_input(">>>market idx: ")
             try:
                 idx = int(idx)
                 self.test_Market, comp_name = self.MarketMgr.InferMkt(idx)
@@ -477,7 +477,7 @@ class DQN_module:
         date_t, x_t, r_0, terminal_0, rev_0 = self.test_Market.Invest_step(do_nothing)
         s_t = x_t.reshape(INPUT_DIM, 1)
         print('Testing '+comp_name+' Start at Date: ' + date_t)
-        for i in range(DAYS_RANGE-1):
+        for i in xrange(DAYS_RANGE-1):
             date_t, x_t, r_0, terminal_0, rev_0 = self.test_Market.Invest_step(do_nothing)
             s_t = np.append(s_t, x_t.reshape(INPUT_DIM, 1), axis=1)
         assert s_t.shape[1] == DAYS_RANGE
@@ -542,10 +542,10 @@ class DQN_module:
 
         ## draw action-close_price figure ##
         assert len(full_corr_or_not) == len(Close_p)
-        for i in range(len(full_corr_or_not)-1):
+        for i in xrange(len(full_corr_or_not)-1):
             plt.plot([i, i+1], Close_p[i:i+2], color_map[int(full_corr_or_not[i])])
         plt.show()
-        input("press to continue...")
+        raw_input("press to continue...")
 
 
     def trainNetwork(self):
@@ -658,7 +658,7 @@ class DQN_module:
                     y_batch = []
                     readout_j1_batch = self.sess.run(self.readout, feed_dict = {self.s : s_j1_batch, self.prob : 1.})
                     readout_j1_batch_tg = self.sess.run(self.target_readout, feed_dict = {self.target_s : s_j1_batch, self.prob : 1.})
-                    for i in range(0, len(minibatch)):
+                    for i in xrange(0, len(minibatch)):
                         terminal = minibatch[i][4]
                         # if terminal, only equals reward
                         if terminal:

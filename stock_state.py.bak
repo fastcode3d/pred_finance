@@ -24,7 +24,7 @@ class Stock_state:
         self.d_Close = []
         self.Close = []
         self.daily_data = np.empty((0, DATA_LEN), dtype='float')
-        self.header = np.array(next(reader)) # Dates High Low Open Close d_Close RSI9 RSI15 MA5 MA20 MA60 d_CO d_HL Adi_Close Volume VA/D d_VA/D %R8 %R21 DIF DEM d_MA5-20
+        self.header = np.array(reader.next()) # Dates High Low Open Close d_Close RSI9 RSI15 MA5 MA20 MA60 d_CO d_HL Adi_Close Volume VA/D d_VA/D %R8 %R21 DIF DEM d_MA5-20
         
         ## d_Close, d_MA5-20, d_VA/D, RSI9, RSI15, DIF, DEM ##
         ids = np.array([5, 21, 16, 6, 7, 19, 20])
@@ -66,7 +66,7 @@ class Stock_state:
             
         self.data_size = len(self.dates)
         assert self.daily_data.shape == (self.data_size, DATA_LEN)
-        print('Load data', self.dates[0], 'to', self.dates[-1], 'from ' + self.header[0] + ',', self.data_size, 'days in total')
+        print 'Load data', self.dates[0], 'to', self.dates[-1], 'from ' + self.header[0] + ',', self.data_size, 'days in total'
         self.header = self.header[ids]
         data_file.close()
 
@@ -159,10 +159,10 @@ class Stock_state:
         batch_data = np.empty((0, self.DAY_RANGE, DATA_LEN), dtype='float')
         batch_label = np.empty((0, 2), dtype='float')
         batch_r_t = []
-        for b_num in range(real_batch_size):
+        for b_num in xrange(real_batch_size):
             day_range_data = np.empty((0, DATA_LEN), dtype='float')
             location = self.randomList[self.next_start + b_num]
-            for day_num in range(self.DAY_RANGE):
+            for day_num in xrange(self.DAY_RANGE):
                 single_day = self.daily_data[location + day_num]
                 day_range_data = np.append(day_range_data, [single_day], axis=0)
             assert day_range_data.shape == (self.DAY_RANGE, DATA_LEN)
@@ -197,10 +197,10 @@ class Stock_state:
         batch_data = np.empty((0, self.DAY_RANGE, DATA_LEN), dtype='float')
         batch_label = np.empty((0, 2), dtype='float')
         batch_r_t = []
-        for b_num in range(real_batch_size):
+        for b_num in xrange(real_batch_size):
             day_range_data = np.empty((0, DATA_LEN), dtype='float')
             location = self.next_start_nonrand + b_num
-            for day_num in range(self.DAY_RANGE):
+            for day_num in xrange(self.DAY_RANGE):
                 single_day = self.daily_data[location + day_num]
                 day_range_data = np.append(day_range_data, [single_day], axis=0)
             assert day_range_data.shape == (self.DAY_RANGE, DATA_LEN)
@@ -227,37 +227,37 @@ class Stock_state:
 
     def show_data(self):
         ## show choice ##
-        print("choices:", end=' ')
+        print "choices:",
         for i, name in enumerate(self.header):
-            print("["+str(i)+' '+name+"]", end=' ')
-        print('\n')
+            print "["+str(i)+' '+name+"]",
+        print '\n'
 
         plt.ion()
         while True:
             ## get request column to draw ##
             while True:
-                column = input(">>> request column: ")
+                column = raw_input(">>> request column: ")
                 if column == "q":
                     sys.exit(0)
                 try:
                     column = int(column)
                     if column < 0 or column >= len(self.header):
-                        print("Invalid column:", column, " Request column should be a positive int!")
+                        print "Invalid column:", column, " Request column should be a positive int!"
                         column = None
 
                 except:
-                        print("Invalid column:", column, " Request column should be a positive int!")
+                        print "Invalid column:", column, " Request column should be a positive int!"
                         column = None
                 if not column == None:
                     break
-            print("Chosen column:", self.header[column], '\n')
+            print "Chosen column:", self.header[column], '\n'
             plt.plot(self.daily_data[:,column], 'r-')#, data[:,column-1], 'ro')
             plt.title(self.header[column])
             plt.show()
 
     def RandGuess(self):
         mul = [1., -1.]
-        rand_act = np.array([random.sample(mul, 1) for i in range(len(self.dates))]).reshape([-1])
+        rand_act = np.array([random.sample(mul, 1) for i in xrange(len(self.dates))]).reshape([-1])
         rev = np.dot(self.d_Close, rand_act)
         return rev
         
@@ -265,15 +265,15 @@ class Stock_state:
 
 def getYear(mode):
     while True:
-        years = input(">>> Year range of "+mode+" set(START END): ")
+        years = raw_input(">>> Year range of "+mode+" set(START END): ")
         years = years.split()
         try:
             years = [int(y) for y in years]
             if not len(years) == 2:
-                print("should be two numbers seperated by space!!")
+                print "should be two numbers seperated by space!!"
                 continue
         except:
-            print("should be two numbers seperated by space!!")
+            print "should be two numbers seperated by space!!"
             continue 
         break
     return [str(y) for y in years]
@@ -302,21 +302,21 @@ if __name__ == "__main__":
                                   end_y=test_range[1],
                                   Adjust=adj)
     except:
-        print("There is no data of " + args.comp + " in folder stock_data!")
+        print "There is no data of " + args.comp + " in folder stock_data!"
         sys.exit(0)
 
     while True:
-        Type = input(">>> train, test or rand? ")
+        Type = raw_input(">>> train, test or rand? ")
         if Type == "q":
             sys.exit(0)
         elif Type == "train" or Type == "test" or Type == "rand":
             break
         else:
-            print("Invalid mode "+Type+"!\n")
+            print "Invalid mode "+Type+"!\n"
     if Type == "train":
         market.show_data()
     elif Type == "test":
         test_market.show_data()
     else:
-        print(test_market.RandGuess())
+        print test_market.RandGuess()
 
