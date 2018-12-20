@@ -27,7 +27,7 @@ if __name__ == "__main__":
     start = args.start
 
     if args.ratio < 0. or args.ratio > 1.:
-        raise "Invalid ratio argumant! Should be in range 0.~1."
+        raise NameError("Invalid ratio argumant! Should be in range 0.~1.")
     else:
         TRAIN_RATIO = args.ratio
 
@@ -181,7 +181,7 @@ if __name__ == "__main__":
 
 
         if volume == 0:
-            raise "volume == 0", data['Date']
+            raise NameError("volume == 0", data['Date'])
         if i < int(data_size*TRAIN_RATIO):
             train_file.write(data['Date'] + ',' +
                              data['High'] + ',' +
