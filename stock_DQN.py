@@ -8,7 +8,7 @@
 
 import tensorflow as tf
 from tensorflow.python.ops import rnn, rnn_cell
-# from tensorflow.contrib import rnn
+import tensorflow.contrib as tc
 import sys
 import random
 import numpy as np
@@ -259,21 +259,37 @@ class DQN_module:
                 tg_input_reshape = tf.reshape(tg_input_trans, [-1, INPUT_DIM])
                 tg_input_list = tf.split(axis=0, num_or_size_splits=DAYS_RANGE, value=tg_input_reshape)  # split to DAY_RANGE element
 
-            # multi LSTM #
-            lstm_cell = rnn_cell.LSTMCell(n_hidden, use_peepholes=True, forget_bias=1.0, state_is_tuple=True)
-            lstm_drop = rnn_cell.DropoutWrapper(lstm_cell, output_keep_prob=self.prob)
-            lstm_stack = rnn_cell.MultiRNNCell([lstm_drop] * n_layer, state_is_tuple=True)
+            # multi LSTM new tensorflwo#
+            lstm_cell = tc.rnn.BasicLSTMCell(n_hidden)
+            lstm_drop = tc.rnn.DropoutWrapper(lstm_cell, output_keep_prob=self.prob)
+            lstm_stack = tc.rnn.MultiRNNCell([lstm_drop] * n_layer, state_is_tuple=True)
 
-            tg_lstm_cell = rnn_cell.LSTMCell(n_hidden, use_peepholes=True, forget_bias=1.0, state_is_tuple=True)
-            tg_lstm_drop = rnn_cell.DropoutWrapper(tg_lstm_cell, output_keep_prob=self.prob)
-            tg_lstm_stack = rnn_cell.MultiRNNCell([tg_lstm_drop] * n_layer, state_is_tuple=True)
+            tg_lstm_cell = tc.rnn.LSTMCell(n_hidden, use_peepholes=True, forget_bias=1.0, state_is_tuple=True)
+            tg_lstm_drop = tc.rnn.DropoutWrapper(tg_lstm_cell, output_keep_prob=self.prob)
+            tg_lstm_stack = tc.rnn.MultiRNNCell([tg_lstm_drop] * n_layer, state_is_tuple=True)
 
-            lstm_output, hidden_states = rnn.rnn(lstm_stack,
+            lstm_output, hidden_states = tc.rnn.static_rnn(lstm_stack,
                                                  input_list,
                                                  dtype='float',
                                                  scope='LSTMStack')  # out: [timestep, batch, hidden], state: [cell, 2(for c, h), batch, hidden]
-            tg_lstm_output, tg_hidden_states = rnn.rnn(tg_lstm_stack, tg_input_list, dtype='float',
+            tg_lstm_output, tg_hidden_states = tc.rnn.static_rnn(tg_lstm_stack, tg_input_list, dtype='float',
                                                        scope='tg_LSTMStack')
+
+            # # multi LSTM #
+            # lstm_cell = rnn_cell.LSTMCell(n_hidden, use_peepholes=True, forget_bias=1.0, state_is_tuple=True)
+            # lstm_drop = rnn_cell.DropoutWrapper(lstm_cell, output_keep_prob=self.prob)
+            # lstm_stack = rnn_cell.MultiRNNCell([lstm_drop] * n_layer, state_is_tuple=True)
+            #
+            # tg_lstm_cell = rnn_cell.LSTMCell(n_hidden, use_peepholes=True, forget_bias=1.0, state_is_tuple=True)
+            # tg_lstm_drop = rnn_cell.DropoutWrapper(tg_lstm_cell, output_keep_prob=self.prob)
+            # tg_lstm_stack = rnn_cell.MultiRNNCell([tg_lstm_drop] * n_layer, state_is_tuple=True)
+            #
+            # lstm_output, hidden_states = rnn.rnn(lstm_stack,
+            #                                      input_list,
+            #                                      dtype='float',
+            #                                      scope='LSTMStack')  # out: [timestep, batch, hidden], state: [cell, 2(for c, h), batch, hidden]
+            # tg_lstm_output, tg_hidden_states = rnn.rnn(tg_lstm_stack, tg_input_list, dtype='float',
+            #                                            scope='tg_LSTMStack')
 
             for var in tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="LSTMStack"):
                 tf.add_to_collection("L2_VARIABLES", var)
