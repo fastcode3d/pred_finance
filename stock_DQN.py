@@ -7,7 +7,6 @@
 
 
 import tensorflow as tf
-from tensorflow.python.ops import rnn, rnn_cell
 import tensorflow.contrib as tc
 import sys
 import random
@@ -54,6 +53,9 @@ def getYear(mode):
             continue
         break
     return [str(y) for y in years]
+
+# def getYear(mode):
+#     return ['2012', '2013']
 
 
 class MultiMarket:
@@ -157,7 +159,7 @@ class DQN_module:
 
         ## build DQN model ##
         # self.createCNN()                          # CNN network
-        self.createMultiRNN(2, 1024)  # LSTM network
+        self.createMultiRNN(1, 1024)  # LSTM network
 
         ## create saver ##
         with self.sess.graph.as_default():
@@ -198,8 +200,8 @@ class DQN_module:
                 tf.nn.conv2d(target_x, target_W, strides=[1, stride, stride, 1], padding='SAME',
                              name='target_conv2d') + b, name='target_relu')
 
-            tf.histogram_summary(name + 'w', W)
-            tf.histogram_summary(name + 'b', b)
+            tf.summary.histogram(name + 'w', W)
+            tf.summary.histogram(name + 'b', b)
 
         for var in tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=name):
             tf.add_to_collection("L2_VARIABLES", var)
@@ -221,8 +223,8 @@ class DQN_module:
             target_b = tf.Variable(b.initialized_value(), trainable=False, name='target_b')
             target_z_out = tf.matmul(target_x, target_W) + target_b
 
-            tf.histogram_summary(name + 'w', W)
-            tf.histogram_summary(name + 'b', b)
+            tf.summary.histogram(name + 'w', W)
+            tf.summary.histogram(name + 'b', b)
 
             if activate:
                 activation = tf.nn.relu(z_out, name='relu')
@@ -251,29 +253,35 @@ class DQN_module:
                 self.s = tf.placeholder('float', shape=[None, INPUT_DIM, DAYS_RANGE], name='input_state')
                 input_trans = tf.transpose(self.s, [2, 0, 1])  # [DAYS_RANGE, None, INPUT_DIM]
                 input_reshape = tf.reshape(input_trans, [-1, INPUT_DIM])
-                input_list = tf.split(axis=0, num_or_size_splits=DAYS_RANGE, value=input_reshape)  # split to DAY_RANGE element
+                input_list = tf.split(axis=0, num_or_size_splits=DAYS_RANGE,
+                                      value=input_reshape)  # split to DAY_RANGE element
 
             with tf.name_scope('tg_input'):
                 self.target_s = tf.placeholder('float', shape=[None, INPUT_DIM, DAYS_RANGE], name='input_state')
                 tg_input_trans = tf.transpose(self.target_s, [2, 0, 1])  # [DAYS_RANGE, None, INPUT_DIM]
                 tg_input_reshape = tf.reshape(tg_input_trans, [-1, INPUT_DIM])
-                tg_input_list = tf.split(axis=0, num_or_size_splits=DAYS_RANGE, value=tg_input_reshape)  # split to DAY_RANGE element
+                tg_input_list = tf.split(axis=0, num_or_size_splits=DAYS_RANGE,
+                                         value=tg_input_reshape)  # split to DAY_RANGE element
 
             # multi LSTM new tensorflwo#
-            lstm_cell = tc.rnn.BasicLSTMCell(n_hidden)
+            lstm_cell = tc.rnn.LSTMCell(n_hidden, use_peepholes=True, forget_bias=1.0, state_is_tuple=True)
             lstm_drop = tc.rnn.DropoutWrapper(lstm_cell, output_keep_prob=self.prob)
-            lstm_stack = tc.rnn.MultiRNNCell([lstm_drop] * n_layer, state_is_tuple=True)
+            # lstm_stack = tc.rnn.MultiRNNCell([lstm_drop] * n_layer, state_is_tuple=True)
+            layers = [lstm_drop for _ in range(n_layer)]
+            lstm_stack = tc.rnn.MultiRNNCell(layers, state_is_tuple=True)
 
             tg_lstm_cell = tc.rnn.LSTMCell(n_hidden, use_peepholes=True, forget_bias=1.0, state_is_tuple=True)
             tg_lstm_drop = tc.rnn.DropoutWrapper(tg_lstm_cell, output_keep_prob=self.prob)
-            tg_lstm_stack = tc.rnn.MultiRNNCell([tg_lstm_drop] * n_layer, state_is_tuple=True)
+            # tg_lstm_stack = tc.rnn.MultiRNNCell([tg_lstm_drop] * n_layer, state_is_tuple=True)
+            tg_layers = [tg_lstm_drop for _ in range(n_layer)]
+            tg_lstm_stack = tc.rnn.MultiRNNCell(tg_layers, state_is_tuple=True)
 
             lstm_output, hidden_states = tc.rnn.static_rnn(lstm_stack,
-                                                 input_list,
-                                                 dtype='float',
-                                                 scope='LSTMStack')  # out: [timestep, batch, hidden], state: [cell, 2(for c, h), batch, hidden]
+                                                           input_list,
+                                                           dtype='float',
+                                                           scope='LSTMStack')  # out: [timestep, batch, hidden], state: [cell, 2(for c, h), batch, hidden]
             tg_lstm_output, tg_hidden_states = tc.rnn.static_rnn(tg_lstm_stack, tg_input_list, dtype='float',
-                                                       scope='tg_LSTMStack')
+                                                                 scope='tg_LSTMStack')
 
             # # multi LSTM #
             # lstm_cell = rnn_cell.LSTMCell(n_hidden, use_peepholes=True, forget_bias=1.0, state_is_tuple=True)
@@ -355,7 +363,7 @@ class DQN_module:
                 l2_loss = tf.add_n([tf.nn.l2_loss(var) for var in tf.get_collection("L2_VARIABLES")])  # l2 loss
                 print([var.name for var in tf.get_collection("L2_VARIABLES")])
 
-                readout_actionQ = tf.reduce_sum(tf.mul(self.readout, self.in_action),
+                readout_actionQ = tf.reduce_sum(tf.multiply(self.readout, self.in_action),
                                                 reduction_indices=1)  # Q value of chosen action
                 self.cost = tf.reduce_mean(tf.square(self.targetQ - readout_actionQ))  # + 0.001*l2_loss # total cost
 
@@ -370,13 +378,13 @@ class DQN_module:
                                                                   global_step=self.global_step,
                                                                   learning_rate=0.0005,
                                                                   optimizer=grad_op,
-                                                                  clip_gradients=1)
-                tf.scalar_summary('learning_rate', learning_rate)
-                tf.scalar_summary('l2_loss', l2_loss)
+                                                                  clip_gradients=1.0)
+                tf.summary.scalar('learning_rate', learning_rate)
+                tf.summary.scalar('l2_loss', l2_loss)
 
         ## training op ##
         with self.sess.graph.as_default():
-            self.merged = tf.merge_all_summaries()
+            self.merged = tf.summary.merge_all()
             self.init_op = tf.initialize_all_variables()
 
         ## record op ##
@@ -386,12 +394,12 @@ class DQN_module:
                 self.action_Qval = tf.placeholder('float', [ACTIONS], 'action_Qval')
                 self.rec_revenue = tf.placeholder('float', name='revenue')
 
-                close_price_summ = tf.scalar_summary('close_price', self.close_price)
-                buy_Qval_summ = tf.scalar_summary('buy_Qval', self.action_Qval[0])
-                sell_Qval_summ = tf.scalar_summary('sell_Qval', self.action_Qval[1])
-                rec_revenue_summ = tf.scalar_summary('revenue', self.rec_revenue)
+                close_price_summ = tf.summary.scalar('close_price', self.close_price)
+                buy_Qval_summ = tf.summary.scalar('buy_Qval', self.action_Qval[0])
+                sell_Qval_summ = tf.summary.scalar('sell_Qval', self.action_Qval[1])
+                rec_revenue_summ = tf.summary.scalar('revenue', self.rec_revenue)
 
-            self.merged_record = tf.merge_summary([close_price_summ, buy_Qval_summ, sell_Qval_summ, rec_revenue_summ])
+            self.merged_record = tf.summary.merge([close_price_summ, buy_Qval_summ, sell_Qval_summ, rec_revenue_summ])
 
         ## test acc op ##
         with self.g_record.as_default():
@@ -399,9 +407,9 @@ class DQN_module:
                 self.testAcc = tf.placeholder('float', name='accuracy')
                 self.testRev = tf.placeholder('float', name='test_revenue')
 
-                testAcc_summ = tf.scalar_summary('accuracy', self.testAcc)
-                testRev_summ = tf.scalar_summary('test_revenue', self.testRev)
-            self.merged_test = tf.merge_summary([testAcc_summ, testRev_summ])
+                testAcc_summ = tf.summary.scalar('accuracy', self.testAcc)
+                testRev_summ = tf.summary.scalar('test_revenue', self.testRev)
+            self.merged_test = tf.summary.merge([testAcc_summ, testRev_summ])
 
     def TestAcc(self, step):
 
@@ -569,12 +577,12 @@ class DQN_module:
         if tf.gfile.Exists(SUMMARY_FOLDER + 'train'):
             tf.gfile.DeleteRecursively(SUMMARY_FOLDER + 'train')
         tf.gfile.MakeDirs(SUMMARY_FOLDER + 'train')
-        train_writer = tf.train.SummaryWriter(SUMMARY_FOLDER + 'train', self.sess.graph)
+        train_writer = tf.summary.FileWriter(SUMMARY_FOLDER + 'train', self.sess.graph)
 
         if tf.gfile.Exists(SUMMARY_FOLDER + 'record'):
             tf.gfile.DeleteRecursively(SUMMARY_FOLDER + 'record')
         tf.gfile.MakeDirs(SUMMARY_FOLDER + 'record')
-        record_writer = tf.train.SummaryWriter(SUMMARY_FOLDER + 'record', self.sess_record.graph)
+        record_writer = tf.summary.FileWriter(SUMMARY_FOLDER + 'record', self.sess_record.graph)
 
         ## loading networks ##
         checkpoint = tf.train.get_checkpoint_state(SAVED_PATH)
