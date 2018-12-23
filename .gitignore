@@ -1,0 +1,9 @@
+data/
+__pycache__
+*.log
+.idea/
+back/
+test/
+results/
+*.pb
+*.txt
