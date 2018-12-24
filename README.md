@@ -5,6 +5,7 @@
  - Deep Q-network implementation
  - DQN model type include CNN and LSTM
  - Target-freezing and DDQN are also implemented
+  - ```CUDA_VISIBLE_DEVICES=0 python stock_DQN.py```
  - ```python stock_DQN.py``` for training, which will automatically search for pre-trained parameters to load
  - ```python stock_DQN.py -m test``` for inference, which will show total reward and accuracy
  - While infering, an action to close price figure will also be generated. Color red stand for correct action, color green stand for wrong action
